@@ -654,3 +654,221 @@ body {
     color: var(--text-secondary);
     font-size: 0.85rem;
 }
+
+/* ===== Fitur 1: Eksplorasi Lowongan (Agoy) ===== */
+.explore-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.explore-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.explore-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 190px 170px;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.skill-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+}
+
+.skill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-subtle);
+    font-size: 0.8rem;
+}
+
+.skill-chip-remove {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.skill-chip-remove:hover {
+    color: var(--danger);
+}
+
+.radio-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.job-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.9rem;
+}
+
+.job-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-card);
+}
+
+.job-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.job-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.job-company {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.job-title {
+    margin: 0.25rem 0 0;
+    font-size: 0.95rem;
+}
+
+.job-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.job-tag {
+    font-size: 0.72rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.job-tag-match {
+    color: var(--text-primary);
+    background: var(--bg-subtle);
+}
+
+.job-tag-missing {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: transparent;
+}
+
+.match-badge {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+}
+
+.match-high {
+    color: var(--success);
+    background: var(--success-bg);
+}
+
+.match-medium {
+    color: var(--warning);
+    background: var(--warning-bg);
+}
+
+.match-low {
+    color: var(--danger);
+    background: var(--danger-bg);
+}
+
+.job-card-footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.job-salary {
+    font-family: ui-monospace, monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.state-box {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--text-secondary);
+}
+
+.state-error {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-radius: 10px;
+}
+
+.state-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.spinner {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 860px) {
+    .explore-layout {
+        grid-template-columns: 1fr;
+    }
+    .explore-toolbar {
+        grid-template-columns: 1fr;
+    }
+}

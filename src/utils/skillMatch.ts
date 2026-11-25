@@ -12,7 +12,7 @@ export function calculateSkillMatch(
 ): SkillMatchResult {
   if (requiredSkills.length === 0) {
     return {
-      percentage: 100,
+      percentage: 0,
       matchedCount: 0,
       totalRequired: 0,
       matchedSkills: [],
@@ -46,4 +46,13 @@ export function calculateSkillMatch(
     matchedSkills,
     missingSkills,
   };
+}
+
+export type MatchLevel = "high" | "medium" | "low";
+
+/** hijau >= 70, kuning 40–69, merah < 40 */
+export function getMatchLevel(percentage: number): MatchLevel {
+  if (percentage >= 70) return "high";
+  if (percentage >= 40) return "medium";
+  return "low";
 }
