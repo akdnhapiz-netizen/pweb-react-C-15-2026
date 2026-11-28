@@ -6,6 +6,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { calculateSkillMatch } from "../utils/skillMatch";
 import { SkillProfile } from "./SkillProfile";
 import { JobCard } from "./JobCard";
+import { makeApplicationKey } from "../utils/applicationUtils";
 
 interface JobExplorerProps {
   kaptenSkills: string[];
@@ -15,11 +16,6 @@ interface JobExplorerProps {
 }
 
 type FetchStatus = "loading" | "error" | "success";
-
-/** Kunci anti-duplikat: company + role, case-insensitive */
-function makeApplicationKey(company: string, role: string): string {
-  return `${company.trim().toLowerCase()}|${role.trim().toLowerCase()}`;
-}
 
 export function JobExplorer({
   kaptenSkills,

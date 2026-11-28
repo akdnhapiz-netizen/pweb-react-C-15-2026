@@ -1,16 +1,26 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Compass, ListChecks, Plus, Scale } from "lucide-react";
 import type { Application, JobListing } from "./types";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { STATUS_LABELS } from "./utils/stateMachine";
-import {
-  StatsDashboard,
-  isApplicationRawanGhosting,
-} from "./components/StatsDashboard";
+import { StatsDashboard } from "./components/StatsDashboard";
 import { ApplicationDetailModal } from "./components/ApplicationDetailModal";
 import { OfferComparator } from "./components/OfferComparator";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { JobExplorer } from "./components/JobExplorer";
+import { ApplicationForm } from "./components/ApplicationForm";
+import { WarRoom } from "./components/WarRoom";
+import { ConflictBanner } from "./components/ConflictBanner";
+import { UndoToast } from "./components/UndoToast";
+import { BackupControls } from "./components/BackupControls";
 import { inferWorkMode } from "./services/jobService";
+import { isDuplicateApplication, shiftLastUpdated } from "./utils/applicationUtils";
+
+const UNDO_DURATION_MS = 5000;
+
+interface PendingDelete {
+  app: Application;
+  index: number; // posisi semula, supaya Undo mengembalikan ke tempat yang sama
+}
 
 const INITIAL_KAPTEN_SKILLS: string[] = [
   "React",
@@ -120,6 +130,18 @@ export function App() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("explore");
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
+  // Fitur 6: Undo Delete
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // bersihkan timer kalau App unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   const offerCount = applications.filter((app) => app.status === "OFFER").length;
   const selectedApplication =
@@ -133,11 +155,7 @@ export function App() {
 
   // Fitur 1: simpan lowongan dari katalog ke daftar lamaran sebagai WISHLIST
   const handleSaveToWishlist = (job: JobListing) => {
-    const key = `${job.company_name.trim().toLowerCase()}|${job.title.trim().toLowerCase()}`;
-    const isDuplicate = applications.some(
-      (app) => `${app.company.trim().toLowerCase()}|${app.role.trim().toLowerCase()}` === key
-    );
-    if (isDuplicate) return;
+    if (isDuplicateApplication(applications, job.company_name, job.title)) return;
 
     const now = new Date().toISOString();
     const newApp: Application = {
@@ -156,42 +174,127 @@ export function App() {
     setApplications((prev) => [newApp, ...prev]);
   };
 
+  // Fitur 2: tambah lamaran dari form manual
+  const handleAddApplication = (newApp: Application) => {
+    setApplications((prev) => [newApp, ...prev]);
+  };
+
+  // Fitur 3: Simulasi +15 Hari (mundurkan lastUpdatedAt)
+  const handleSimulate = (id: string) => {
+    setApplications((prev) =>
+      prev.map((app) => (app.id === id ? shiftLastUpdated(app, 15) : app))
+    );
+  };
+
+  // Fitur 6: hapus + simpan salinan untuk Undo selama 5 detik
+  const handleDelete = (id: string) => {
+    const index = applications.findIndex((app) => app.id === id);
+    if (index === -1) return;
+    const deletedApp = applications[index];
+
+    setApplications((prev) => prev.filter((app) => app.id !== id));
+    if (selectedAppId === id) setSelectedAppId(null);
+
+    // hapus 2x berturut-turut: timer lama dibersihkan dulu
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+
+    setPendingDelete({ app: deletedApp, index });
+    undoTimerRef.current = setTimeout(() => {
+      setPendingDelete(null); // lewat 5 detik -> terhapus permanen
+      undoTimerRef.current = null;
+    }, UNDO_DURATION_MS);
+  };
+
+  const handleUndo = () => {
+    if (!pendingDelete) return;
+    const { app, index } = pendingDelete;
+
+    // kembalikan utuh (checklist & activityLogs ikut) di posisi semula, secara immutable
+    setApplications((prev) => {
+      if (prev.some((a) => a.id === app.id)) return prev;
+      return [...prev.slice(0, index), app, ...prev.slice(index)];
+    });
+
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = null;
+    setPendingDelete(null);
+  };
+
+  const NAV_ITEMS: { id: ActiveTab; label: string; icon: typeof Compass; count?: number }[] = [
+    { id: "explore", label: "Eksplorasi Lowongan", icon: Compass },
+    { id: "pipeline", label: "Pipeline Lamaran", icon: ListChecks, count: applications.length },
+    { id: "comparator", label: "Bandingkan Offer", icon: Scale, count: offerCount },
+  ];
+
+  const PAGE_INFO: Record<ActiveTab, { title: string; subtitle: string }> = {
+    explore: {
+      title: "Eksplorasi Lowongan",
+      subtitle: "Temukan lowongan magang dan lihat seberapa cocok skill Kapten.",
+    },
+    pipeline: {
+      title: "War Room Lamaran",
+      subtitle: "Pantau status, jadwal interview, dan lamaran yang rawan ghosting.",
+    },
+    comparator: {
+      title: "Bandingkan Offer",
+      subtitle: "Pilih dua offer dan lihat skor berbobotnya secara objektif.",
+    },
+  };
+
   return (
-    <div>
-      <header className="topbar">
+    <div className="app-shell">
+      <aside className="sidebar">
         <div className="brand-group">
           <span className="brand-logo">AM</span>
           <span>Aku Mw Magang</span>
         </div>
 
+        <button type="button" className="btn btn-primary sidebar-cta" onClick={() => setShowForm(true)}>
+          <Plus size={18} aria-hidden="true" />
+          Catat Lamaran
+        </button>
+
         <nav className="nav-tabs" aria-label="Navigasi Utama">
-          <button
-            type="button"
-            className={`nav-tab ${activeTab === "explore" ? "nav-tab-active" : ""}`}
-            onClick={() => setActiveTab("explore")}
-          >
-            Eksplorasi Lowongan
-          </button>
-          <button
-            type="button"
-            className={`nav-tab ${activeTab === "pipeline" ? "nav-tab-active" : ""}`}
-            onClick={() => setActiveTab("pipeline")}
-          >
-            Pipeline Lamaran ({applications.length})
-          </button>
-          <button
-            type="button"
-            className={`nav-tab ${activeTab === "comparator" ? "nav-tab-active" : ""}`}
-            onClick={() => setActiveTab("comparator")}
-          >
-            Bandingkan Offer ({offerCount})
-          </button>
+          <span className="nav-heading">Menu</span>
+          {NAV_ITEMS.map(({ id, label, icon: Icon, count }) => (
+            <button
+              key={id}
+              type="button"
+              className={`nav-tab ${activeTab === id ? "nav-tab-active" : ""}`}
+              aria-current={activeTab === id ? "page" : undefined}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={18} aria-hidden="true" />
+              <span className="nav-label">{label}</span>
+              {count !== undefined && <span className="nav-count">{count}</span>}
+            </button>
+          ))}
         </nav>
 
-        <ThemeToggle />
-      </header>
+        <div className="sidebar-footer">
+          <ThemeToggle />
+        </div>
+      </aside>
 
       <main className="main-container">
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">{PAGE_INFO[activeTab].title}</h1>
+            <p className="page-subtitle">{PAGE_INFO[activeTab].subtitle}</p>
+          </div>
+          {activeTab === "pipeline" && (
+            <BackupControls
+              applications={applications}
+              kaptenSkills={kaptenSkills}
+              onImportApplications={setApplications}
+              onImportSkills={setKaptenSkills}
+            />
+          )}
+        </header>
+
+        {/* Fitur 3: Banner Bentrok, dari SELURUH data (bukan yang ter-filter) */}
+        <ConflictBanner applications={applications} />
+
         {/* Fitur 7A: Dashboard Statistik (Derived State) */}
         <StatsDashboard applications={applications} />
 
@@ -205,40 +308,13 @@ export function App() {
         )}
 
         {activeTab === "pipeline" && (
-          <section className="pipeline-list" aria-label="Daftar Lamaran">
-            {applications.map((app) => {
-              const doneCount = app.checklist.filter((c) => c.done).length;
-              const isGhosting = isApplicationRawanGhosting(app);
-
-              return (
-                <article key={app.id} className="pipeline-card">
-                  <div>
-                    <div className="detail-title-row" style={{ justifyContent: "space-between" }}>
-                      <strong>{app.company}</strong>
-                      <span className={`status-pill status-${app.status.toLowerCase()}`}>
-                        {STATUS_LABELS[app.status]}
-                      </span>
-                    </div>
-                    <p className="detail-meta">{app.role}</p>
-                    <p className="detail-meta">
-                      Mode: {app.workMode} • Checklist: {doneCount}/{app.checklist.length}
-                      {isGhosting && (
-                        <span className="text-danger"> • Rawan Ghosting</span>
-                      )}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => setSelectedAppId(app.id)}
-                  >
-                    Buka Detail &amp; Latihan Interview
-                  </button>
-                </article>
-              );
-            })}
-          </section>
+          <WarRoom
+            applications={applications}
+            kaptenSkills={kaptenSkills}
+            onOpenDetail={setSelectedAppId}
+            onDelete={handleDelete}
+            onSimulate={handleSimulate}
+          />
         )}
 
         {activeTab === "comparator" && (
@@ -255,6 +331,25 @@ export function App() {
           application={selectedApplication}
           onClose={() => setSelectedAppId(null)}
           onUpdateApplication={handleUpdateApplication}
+        />
+      )}
+
+      {/* Fitur 2: Form Tambah Lamaran Manual */}
+      {showForm && (
+        <ApplicationForm
+          applications={applications}
+          onAdd={handleAddApplication}
+          onClose={() => setShowForm(false)}
+        />
+      )}
+
+      {/* Fitur 6: Toast Undo (key = id supaya hitung mundur reset tiap delete) */}
+      {pendingDelete && (
+        <UndoToast
+          key={pendingDelete.app.id}
+          company={pendingDelete.app.company}
+          durationMs={UNDO_DURATION_MS}
+          onUndo={handleUndo}
         />
       )}
     </div>

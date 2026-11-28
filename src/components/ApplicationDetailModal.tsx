@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import type {
   Application,
   ApplicationStatus,
@@ -230,7 +231,7 @@ export function ApplicationDetailModal({
             onClick={onClose}
             aria-label="Tutup detail lamaran"
           >
-            Tutup ✕
+            <X size={16} aria-hidden="true" /> Tutup
           </button>
         </header>
 
@@ -248,7 +249,7 @@ export function ApplicationDetailModal({
                   <strong>final</strong> dan tidak dapat diubah lagi.
                 </div>
               ) : (
-                <form onSubmit={handleConfirmTransition} className="transition-form">
+                <form onSubmit={handleConfirmTransition} className="transition-form" noValidate>
                   <label className="form-label">Pindahkan status ke:</label>
                   <div className="target-pill-group">
                     {availableTargets.map((target) => (
@@ -405,7 +406,7 @@ export function ApplicationDetailModal({
                         onClick={() => handleDeleteChecklist(item.id)}
                         aria-label={`Hapus item ${item.text}`}
                       >
-                        ✕
+                        <X size={16} aria-hidden="true" />
                       </button>
                     </li>
                   ))

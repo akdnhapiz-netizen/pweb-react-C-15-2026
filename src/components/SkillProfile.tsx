@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
 interface SkillProfileProps {
@@ -73,7 +74,7 @@ export function SkillProfile({ skills, onChangeSkills }: SkillProfileProps) {
                 aria-label={`Hapus skill ${skill}`}
                 onClick={() => handleRemove(skill)}
               >
-                ×
+                <X size={14} aria-hidden="true" />
               </button>
             </span>
           ))}
